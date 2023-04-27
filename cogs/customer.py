@@ -11,7 +11,14 @@ from cogs.utils import mongo
 class Customer(commands.GroupCog, group_name='customer'):
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
+        self.already_customer = 'Customer has already been onboarded'
+        self.not_customer = 'Customer has not been onboarded yet'
         self.category_name = 'Customers'
+
+    async def customer_exists(self, channel_id: int) -> bool:
+        customer = mongo.Customer(channel_id)
+        customer_info = await customer.check()
+        return bool(customer_info)
 
     @app_commands.command()
     @app_commands.describe(
@@ -21,6 +28,14 @@ class Customer(commands.GroupCog, group_name='customer'):
         self, interaction: discord.Interaction, name: str, stripe: str
     ) -> None:
         """Add a new customer to the database"""
+        result = await self.customer_exists(interaction.channel_id)
+
+        if result is True:
+            await interaction.response.send_message(
+                self.already_customer, ephemeral=True
+            )
+            return
+
         customer_info = {
             '_id': interaction.channel_id,
             'name': name,
@@ -39,6 +54,9 @@ class Customer(commands.GroupCog, group_name='customer'):
         await interaction.response.send_message(content, ephemeral=True)
 
     @app_commands.command()
+    @app_commands.describe(
+        name='Customer name', stripe='Subscription identifier'
+    )
     async def update(
         self,
         interaction: discord.Interaction,
@@ -46,6 +64,14 @@ class Customer(commands.GroupCog, group_name='customer'):
         stripe: str = None
     ) -> None:
         """Update an existing customer"""
+        result = await self.customer_exists(interaction.channel_id)
+
+        if result is False:
+            await interaction.response.send_message(
+                self.not_customer, ephemeral=True
+            )
+            return
+
         customer_info = {}
 
         if name:
