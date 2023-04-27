@@ -15,25 +15,40 @@ class Client(commands.GroupCog, group_name='client'):
 
     @app_commands.command()
     async def onboarding(
-        self, interaction: discord.Interaction, client: str
+        self, interaction: discord.Interaction, name: str
     ) -> None:
         """Add a new client to the database"""
         client_info = {
             '_id': interaction.channel_id,
-            'name': client
+            'name': name
         }
-        _client = mongo.Client()
-        await _client.create(client_info)
+        client = mongo.Client()
+        await client.create(client_info)
 
         client_category = discord.utils.get(
             interaction.guild.categories, name=self.category_name
         )
         await interaction.channel.move(category=client_category, end=True)
 
+        await interaction.channel.edit(name=name)
+
         content = (
-            f'Client \'{client}\' has been setted up '
+            f'Client \'{name}\' has been setted up '
             'successfully, welcome to Bitacora!'
         )
+        await interaction.response.send_message(content)
+
+    @app_commands.command()
+    async def update(
+        self, interaction: discord.Interaction, name: str
+    ) -> None:
+        """Update an existing client"""
+        client = mongo.Client(interaction.channel_id)
+        await client.update({'name': name})
+
+        await interaction.channel.edit(name=name)
+
+        content = f'Client \'{name}\' has been updated successfully.'
         await interaction.response.send_message(content)
 
 
