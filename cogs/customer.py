@@ -86,8 +86,8 @@ class Customer(commands.GroupCog, group_name='customer'):
             customer = mongo.Customer(interaction.channel_id)
             await customer.update(customer_info)
 
-            customer_info = await customer.check()
-            name = customer_info.get('name')
+            updated_customer_info = await customer.check()
+            name = updated_customer_info.get('name')
 
             content = f'Customer \'{name}\' has been updated successfully.'
 
