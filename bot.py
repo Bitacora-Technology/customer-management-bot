@@ -16,6 +16,7 @@ initial_extensions = files.get_initial_extensions()
 
 class Bot(commands.Bot):
     def __init__(self):
+        prefix = commands.when_mentioned_or(config.prefix)
         allowed_mentions = discord.AllowedMentions.all()
         intents = discord.Intents.default()
         intents.message_content = True
@@ -23,7 +24,7 @@ class Bot(commands.Bot):
             type=discord.ActivityType.watching, name='https://bitacora.gg'
         )
         super().__init__(
-            command_prefix=config.prefix,
+            command_prefix=prefix,
             allowed_mentions=allowed_mentions,
             intents=intents,
             activity=activity,
