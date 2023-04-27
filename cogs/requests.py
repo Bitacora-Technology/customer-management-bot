@@ -9,6 +9,7 @@ from cogs.utils import mongo
 class Requests(commands.GroupCog, group_name='requests'):
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
+        self.not_customer = 'Customer has not been onboarded yet'
 
     async def customer_exists(self, channel_id: int) -> bool:
         customer = mongo.Customer(channel_id)
@@ -21,8 +22,7 @@ class Requests(commands.GroupCog, group_name='requests'):
         result = await self.customer_exists(interaction.channel_id)
 
         if result is False:
-            content = 'Customer was not found in the database'
-            await interaction.response.send_message(content)
+            await interaction.response.send_message(self.not_customer)
             return
 
     @app_commands.command()
@@ -31,8 +31,7 @@ class Requests(commands.GroupCog, group_name='requests'):
         result = await self.customer_exists(interaction.channel_id)
 
         if result is False:
-            content = 'Customer was not found in the database'
-            await interaction.response.send_message(content)
+            await interaction.response.send_message(self.not_customer)
             return
 
     @app_commands.command()
@@ -41,8 +40,7 @@ class Requests(commands.GroupCog, group_name='requests'):
         result = await self.customer_exists(interaction.channel_id)
 
         if result is False:
-            content = 'Customer was not found in the database'
-            await interaction.response.send_message(content)
+            await interaction.response.send_message(self.not_customer)
             return
 
     @app_commands.command()
@@ -51,8 +49,7 @@ class Requests(commands.GroupCog, group_name='requests'):
         result = await self.customer_exists(interaction.channel_id)
 
         if result is False:
-            content = 'Customer was not found in the database'
-            await interaction.response.send_message(content)
+            await interaction.response.send_message(self.not_customer)
             return
 
 
