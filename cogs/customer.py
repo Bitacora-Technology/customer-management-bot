@@ -14,13 +14,17 @@ class Customer(commands.GroupCog, group_name='customer'):
         self.category_name = 'Customers'
 
     @app_commands.command()
+    @app_commands.describe(
+        name='Customer name', stripe='Subscription identifier'
+    )
     async def onboarding(
-        self, interaction: discord.Interaction, name: str
+        self, interaction: discord.Interaction, name: str, stripe: str
     ) -> None:
         """Add a new customer to the database"""
         customer_info = {
             '_id': interaction.channel_id,
-            'name': name
+            'name': name,
+            'stripe': stripe
         }
         customer = mongo.Customer()
         await customer.create(customer_info)
@@ -29,27 +33,39 @@ class Customer(commands.GroupCog, group_name='customer'):
             interaction.guild.categories, name=self.category_name
         )
         await interaction.channel.move(category=customer_category, end=True)
-
         await interaction.channel.edit(name=name)
 
-        content = (
-            f'Customer \'{name}\' has been setted up '
-            'successfully, welcome to Bitacora!'
-        )
-        await interaction.response.send_message(content)
+        content = f'Customer \'{name}\' has been setted up successfully'
+        await interaction.response.send_message(content, ephemeral=True)
 
     @app_commands.command()
     async def update(
-        self, interaction: discord.Interaction, name: str
+        self,
+        interaction: discord.Interaction,
+        name: str = None,
+        stripe: str = None
     ) -> None:
         """Update an existing customer"""
-        customer = mongo.customer(interaction.channel_id)
-        await customer.update({'name': name})
+        customer_info = {}
 
-        await interaction.channel.edit(name=name)
+        if name:
+            customer_info['name'] = name
+            await interaction.channel.edit(name=name)
+        if stripe:
+            customer_info['stripe'] = stripe
 
-        content = f'Customer \'{name}\' has been updated successfully.'
-        await interaction.response.send_message(content)
+        if customer_info == {}:
+            content = 'Nothing has been specified'
+        else:
+            customer = mongo.Customer(interaction.channel_id)
+            await customer.update(customer_info)
+
+            customer_info = await customer.check()
+            name = customer_info.get('name')
+
+            content = f'Customer \'{name}\' has been updated successfully.'
+
+        await interaction.response.send_message(content, ephemeral=True)
 
 
 async def setup(bot: Bot) -> None:
