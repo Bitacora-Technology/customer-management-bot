@@ -6,10 +6,10 @@ from bot import Bot
 from cogs.utils import mongo
 
 
-class Client(commands.GroupCog, group_name='client'):
+class Requests(commands.GroupCog, group_name='requests'):
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
 
 
 async def setup(bot: Bot) -> None:
-    await bot.add_cog(Client(bot))
+    await bot.add_cog(Requests(bot))
