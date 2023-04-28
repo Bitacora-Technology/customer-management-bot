@@ -16,9 +16,12 @@ def simple_request_embed(info: dict) -> discord.Embed:
 
 class AddPriorityView(discord.ui.View):
     def __init__(self, info: dict) -> None:
-        super().__init__(timeout=None)
+        super().__init__(timeout=600)
         self.request_info = info
         self.board_command = '</requests board:1101120797424234587>'
+
+    async def on_timeout(self) -> None:
+        await self.message.delete()
 
     async def add_request(self) -> None:
         self.request_info['priority'] = self.priority
@@ -85,12 +88,18 @@ class AddRequestModal(discord.ui.Modal):
             'name': self.name.value,
             'description': self.description.value
         }
+
         embed = simple_request_embed(request_info)
         embed.set_footer(
             text='Select the priority to add the request to the board'
         )
+
         view = AddPriorityView(request_info)
-        await interaction.response.send_message(embed=embed, view=view)
+        view.message = await interaction.channel.send(
+            embed=embed, view=view
+        )
+
+        await interaction.response.defer()
 
 
 class Requests(commands.GroupCog, group_name='requests'):
