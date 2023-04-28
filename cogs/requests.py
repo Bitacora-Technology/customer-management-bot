@@ -7,6 +7,92 @@ from bot import Bot
 from cogs.utils import mongo
 
 
+def add_request_embed(info: dict) -> discord.Embed:
+    embed = discord.Embed(
+        title=info['name'], description=info['description'], color=12718096
+    )
+    embed.set_footer(
+        text='Select the priority to add the request to the board'
+    )
+    return embed
+
+
+class RequestPriorityView(discord.ui.View):
+    def __init__(self, info: dict) -> None:
+        super().__init__(timeout=None)
+        self.request_info = info
+        self.board_command = '</requests board:1101120797424234587>'
+
+    async def add_request(self) -> None:
+        self.request_info['priority'] = self.priority
+
+        customer = mongo.Customer(self.interaction.channel_id)
+        customer_info = await customer.check()
+
+        requests = customer_info.get('requests', [])
+        requests.append(self.request_info)
+        await customer.update({'requests': requests})
+
+        name = self.request_info.get('name')
+        content = (
+            f'The request \'{name}\' has been added to the board, '
+            f'you can check it using the command {self.board_command}'
+        )
+        await self.interaction.response.edit_message(
+            content=content, embed=None, view=None
+        )
+
+    @discord.ui.button(
+        label='High priority', style=discord.ButtonStyle.primary
+    )
+    async def high_priority(
+        self, interaction: discord.Interaction, button: discord.Button
+    ) -> None:
+        self.interaction = interaction
+        self.priority = 0
+        await self.add_request()
+
+    @discord.ui.button(
+        label='Medium priority', style=discord.ButtonStyle.primary
+    )
+    async def medium_priority(
+        self, interaction: discord.Interaction, button: discord.Button
+    ) -> None:
+        self.interaction = interaction
+        self.priority = 1
+        await self.add_request()
+
+    @discord.ui.button(
+        label='Low priority', style=discord.ButtonStyle.primary
+    )
+    async def low_priority(
+        self, interaction: discord.Interaction, button: discord.Button
+    ) -> None:
+        self.interaction = interaction
+        self.priority = 2
+        await self.add_request()
+
+
+class NewRequestModal(discord.ui.Modal):
+    def __init__(self) -> None:
+        super().__init__(title='Add request')
+
+    name = discord.ui.TextInput(label='Name')
+
+    description = discord.ui.TextInput(
+        label='Description', style=discord.TextStyle.long
+    )
+
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        request_info = {
+            'name': self.name.value,
+            'description': self.description.value
+        }
+        embed = add_request_embed(request_info)
+        view = RequestPriorityView(request_info)
+        await interaction.response.send_message(embed=embed, view=view)
+
+
 class Requests(commands.GroupCog, group_name='requests'):
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
@@ -34,6 +120,9 @@ class Requests(commands.GroupCog, group_name='requests'):
         if bool(customer_info) is False:
             await interaction.response.send_message(self.not_customer)
             return
+
+        modal = NewRequestModal()
+        await interaction.response.send_modal(modal)
 
     @app_commands.command()
     async def update(self, interaction: discord.Interaction) -> None:
