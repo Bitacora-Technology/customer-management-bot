@@ -102,6 +102,11 @@ class AddRequestModal(discord.ui.Modal):
         await interaction.response.defer()
 
 
+class SelectRequestView(discord.ui.View):
+    def __init__(self, action: str) -> None:
+        super().__init__(timeout=600)
+
+
 class Requests(commands.GroupCog, group_name='requests'):
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
