@@ -19,3 +19,9 @@ class Customer:
     async def update(self, query: dict) -> None:
         set_query = {'$set': query}
         await self.customers.update_one(self.query, set_query, upsert=True)
+
+    async def delete(self) -> None:
+        await self.customers.delete_one(self.query)
+
+    def cursor(self) -> motor.AsyncIOMotorCursor:
+        return self.customers.find()
