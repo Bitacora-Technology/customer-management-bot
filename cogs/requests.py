@@ -7,17 +7,14 @@ from bot import Bot
 from cogs.utils import mongo
 
 
-def add_request_embed(info: dict) -> discord.Embed:
+def simple_request_embed(info: dict) -> discord.Embed:
     embed = discord.Embed(
         title=info['name'], description=info['description'], color=12718096
-    )
-    embed.set_footer(
-        text='Select the priority to add the request to the board'
     )
     return embed
 
 
-class RequestPriorityView(discord.ui.View):
+class AddPriorityView(discord.ui.View):
     def __init__(self, info: dict) -> None:
         super().__init__(timeout=None)
         self.request_info = info
@@ -73,7 +70,7 @@ class RequestPriorityView(discord.ui.View):
         await self.add_request()
 
 
-class NewRequestModal(discord.ui.Modal):
+class AddRequestModal(discord.ui.Modal):
     def __init__(self) -> None:
         super().__init__(title='Add request')
 
@@ -88,8 +85,11 @@ class NewRequestModal(discord.ui.Modal):
             'name': self.name.value,
             'description': self.description.value
         }
-        embed = add_request_embed(request_info)
-        view = RequestPriorityView(request_info)
+        embed = simple_request_embed(request_info)
+        embed.set_footer(
+            text='Select the priority to add the request to the board'
+        )
+        view = AddPriorityView(request_info)
         await interaction.response.send_message(embed=embed, view=view)
 
 
@@ -121,7 +121,7 @@ class Requests(commands.GroupCog, group_name='requests'):
             await interaction.response.send_message(self.not_customer)
             return
 
-        modal = NewRequestModal()
+        modal = AddRequestModal()
         await interaction.response.send_modal(modal)
 
     @app_commands.command()
