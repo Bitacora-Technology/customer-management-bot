@@ -16,12 +16,15 @@ def simple_request_embed(info: dict) -> discord.Embed:
 
 class AddPriorityView(discord.ui.View):
     def __init__(self, info: dict) -> None:
-        super().__init__(timeout=600)
+        super().__init__(timeout=300)
         self.request_info = info
         self.board_command = '</requests board:1101120797424234587>'
 
     async def on_timeout(self) -> None:
-        await self.message.delete()
+        for item in self.children:
+            item.disabled = True
+
+        await self.message.edit(view=self)
 
     async def add_request(self) -> None:
         self.request_info['priority'] = self.priority
