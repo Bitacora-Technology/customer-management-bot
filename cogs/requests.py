@@ -15,7 +15,7 @@ def simple_request_embed(info: dict) -> discord.Embed:
 
 
 def view_requests_embed(requests: list) -> discord.Embed:
-    embed = discord.Embed(title='Feature requests')
+    embed = discord.Embed(title='Requests board')
     priority_list = ['🔴', '🟡', '🟢']
 
     count = 1
@@ -31,9 +31,9 @@ def view_requests_embed(requests: list) -> discord.Embed:
 
 class AddPriorityView(discord.ui.View):
     def __init__(self, info: dict) -> None:
-        super().__init__(timeout=300)
+        super().__init__(timeout=600)
         self.request_info = info
-        self.board_command = '</requests board:1101120797424234587>'
+        self.added_request = 'The request \'{}\' has been added to the board'
 
     async def on_timeout(self) -> None:
         await self.message.delete()
@@ -49,17 +49,14 @@ class AddPriorityView(discord.ui.View):
         await customer.update({'requests': requests})
 
         name = self.request_info.get('name')
-        content = (
-            f'The request \'{name}\' has been added to the board, '
-            f'you can check it using the command {self.board_command}'
-        )
         await self.interaction.response.edit_message(
-            content=content, embed=None, view=None
+            content=self.added_request.format(name),
+            embed=None,
+            view=None,
+            delete_after=180
         )
 
-    @discord.ui.button(
-        label='High', emoji='🔴', style=discord.ButtonStyle.secondary
-    )
+    @discord.ui.button(label='High', emoji='🔴')
     async def high_priority(
         self, interaction: discord.Interaction, button: discord.Button
     ) -> None:
@@ -67,9 +64,7 @@ class AddPriorityView(discord.ui.View):
         self.priority = 0
         await self.add_request()
 
-    @discord.ui.button(
-        label='Medium', emoji='🟡', style=discord.ButtonStyle.secondary
-    )
+    @discord.ui.button(label='Medium', emoji='🟡')
     async def medium_priority(
         self, interaction: discord.Interaction, button: discord.Button
     ) -> None:
@@ -77,9 +72,7 @@ class AddPriorityView(discord.ui.View):
         self.priority = 1
         await self.add_request()
 
-    @discord.ui.button(
-        label='Low', emoji='🟢', style=discord.ButtonStyle.secondary
-    )
+    @discord.ui.button(label='Low', emoji='🟢')
     async def low_priority(
         self, interaction: discord.Interaction, button: discord.Button
     ) -> None:
@@ -117,25 +110,67 @@ class AddRequestModal(discord.ui.Modal):
         await interaction.response.defer()
 
 
+class UpdateInfoModal(discord.ui.Modal):
+    def __init__(self, info: dict) -> None:
+        super().__init__(title='Update request', timeout=None)
+        self.request_info = info
+        self.request_updated = 'The request \'{}\' has been updated'
+
+        name = info.get('name')
+        self.name = discord.ui.TextInput(label='Name', default=name)
+        self.add_item(self.name)
+
+        description = info.get('description')
+        self.description = discord.ui.TextInput(
+            label='Description',
+            default=description,
+            style=discord.TextStyle.long
+        )
+        self.add_item(self.description)
+
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        request_info = {
+            'name': self.name.value,
+            'description': self.description.value,
+            'priority': self.request_info['priority']
+        }
+
+        customer = mongo.Customer(interaction.channel_id)
+        customer_info = await customer.check()
+
+        requests = customer_info.get('requests', [])
+        try:
+            requests.remove(self.request_info)
+        except Exception:
+            pass
+
+        requests.append(request_info)
+        await customer.update({'requests': requests})
+        await interaction.response.edit_message(
+            content=self.request_updated.format(self.name.value),
+            embed=None,
+            view=None,
+            delete_after=180
+        )
+
+
 class UpdateRequestView(discord.ui.View):
     def __init__(self, info: dict) -> None:
         super().__init__(timeout=600)
         self.request_info = info
 
+    async def on_timeout(self) -> None:
+        await self.message.delete()
+
     @discord.ui.button(label='Information', style=discord.ButtonStyle.primary)
     async def information(
         self, interaction: discord.Interaction, button: discord.Button
     ) -> None:
-        pass
+        modal = UpdateInfoModal(self.request_info)
+        await interaction.response.send_modal(modal)
 
     @discord.ui.button(label='Priority', style=discord.ButtonStyle.primary)
     async def priority(
-        self, interaction: discord.Interaction, button: discord.Button
-    ) -> None:
-        pass
-
-    @discord.ui.button(label='Go back', style=discord.ButtonStyle.secondary)
-    async def go_back(
         self, interaction: discord.Interaction, button: discord.Button
     ) -> None:
         pass
@@ -145,6 +180,11 @@ class DeleteRequestView(discord.ui.View):
     def __init__(self, info: dict) -> None:
         super().__init__(timeout=600)
         self.request_info = info
+        self.deleted_true = 'The request \'{}\' has been deleted'
+        self.deleted_false = 'The request could not be deleted, try again'
+
+    async def on_timeout(self) -> None:
+        await self.message.delete()
 
     @discord.ui.button(
         label='Yes, I want to delete it',
@@ -153,13 +193,29 @@ class DeleteRequestView(discord.ui.View):
     async def delete(
         self, interaction: discord.Interaction, button: discord.Button
     ) -> None:
-        pass
+        customer = mongo.Customer(interaction.channel_id)
+        customer_info = await customer.check()
 
-    @discord.ui.button(label='Go back', style=discord.ButtonStyle.secondary)
-    async def go_back(
-        self, interaction: discord.Interaction, button: discord.Button
-    ) -> None:
-        pass
+        requests = customer_info.get('requests', [])
+        try:
+            requests.remove(self.request_info)
+        except Exception:
+            await interaction.response.edit_message(
+                content=self.deleted_false,
+                embed=None,
+                view=None,
+                delete_after=180
+            )
+            return
+
+        name = self.request_info.get('name')
+        await customer.update({'requests': requests})
+        await interaction.response.edit_message(
+            content=self.deleted_true.format(name),
+            embed=None,
+            view=None,
+            delete_after=180
+        )
 
 
 class SelectRequestButton(discord.ui.Button):
@@ -194,7 +250,7 @@ class SelectRequestButton(discord.ui.Button):
         embed = simple_request_embed(request_info)
         if self.action == 'update':
             embed.set_footer(
-                text='Select what you want to update'
+                text='Choose what you want to update'
             )
             view = UpdateRequestView(request_info)
         else:
@@ -202,7 +258,9 @@ class SelectRequestButton(discord.ui.Button):
                 text='Once you have confirmed it cannot be restored'
             )
             view = DeleteRequestView(request_info)
-        await interaction.response.edit_message(embed=embed, view=view)
+        view.message = await interaction.response.edit_message(
+            embed=embed, view=view
+        )
 
 
 class SelectRequestView(discord.ui.View):
