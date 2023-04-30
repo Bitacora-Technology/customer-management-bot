@@ -22,10 +22,16 @@ class Customer(commands.GroupCog, group_name='customer'):
 
     @app_commands.command()
     @app_commands.describe(
-        name='Customer name', stripe='Subscription identifier'
+        name='Customer name',
+        stripe='Subscription identifier',
+        notion='Notion URL'
     )
     async def onboarding(
-        self, interaction: discord.Interaction, name: str, stripe: str
+        self,
+        interaction: discord.Interaction,
+        name: str,
+        stripe: str,
+        notion: str
     ) -> None:
         """Add a new customer to the database"""
         result = await self.customer_exists(interaction.channel_id)
@@ -39,7 +45,8 @@ class Customer(commands.GroupCog, group_name='customer'):
         customer_info = {
             '_id': interaction.channel_id,
             'name': name,
-            'stripe': stripe
+            'stripe': stripe,
+            'notion': notion
         }
         customer = mongo.Customer()
         await customer.create(customer_info)
@@ -55,13 +62,16 @@ class Customer(commands.GroupCog, group_name='customer'):
 
     @app_commands.command()
     @app_commands.describe(
-        name='Customer name', stripe='Subscription identifier'
+        name='Customer name',
+        stripe='Subscription identifier',
+        notion='Notion URL'
     )
     async def update(
         self,
         interaction: discord.Interaction,
         name: str = None,
-        stripe: str = None
+        stripe: str = None,
+        notion: str = None
     ) -> None:
         """Update an existing customer"""
         result = await self.customer_exists(interaction.channel_id)
@@ -79,6 +89,8 @@ class Customer(commands.GroupCog, group_name='customer'):
             await interaction.channel.edit(name=name)
         if stripe:
             customer_info['stripe'] = stripe
+        if notion:
+            customer_info['notion'] = notion
 
         if customer_info == {}:
             content = 'Nothing has been specified'
