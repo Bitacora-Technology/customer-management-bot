@@ -24,16 +24,13 @@ class Customer(commands.GroupCog, group_name='customer'):
 
     @app_commands.command()
     @app_commands.describe(
-        name='Customer name',
-        stripe='Subscription identifier',
-        notion='Notion URL'
+        name='Customer name', stripe='Subscription identifier'
     )
     async def onboarding(
         self,
         interaction: discord.Interaction,
         name: str,
-        stripe: str,
-        notion: str
+        stripe: str
     ) -> None:
         """Add a new customer to the database"""
         result = await self.customer_exists(interaction.channel_id)
@@ -47,8 +44,7 @@ class Customer(commands.GroupCog, group_name='customer'):
         customer_info = {
             '_id': interaction.channel_id,
             'name': name,
-            'stripe': stripe,
-            'notion': notion
+            'stripe': stripe
         }
         customer = mongo.Customer()
         await customer.create(customer_info)
