@@ -1,5 +1,6 @@
 from discord.ext import commands
 from discord import app_commands
+from typing import Optional
 import discord
 
 from bot import Bot
@@ -13,12 +14,13 @@ class Customer(commands.GroupCog, group_name='customer'):
         self.bot = bot
         self.already_customer = 'Customer has already been onboarded'
         self.not_customer = 'Customer has not been onboarded yet'
+        self.not_notion = 'Notion URL was not specified'
         self.category_name = 'Customers'
 
-    async def customer_exists(self, channel_id: int) -> bool:
+    async def customer_exists(self, channel_id: int) -> Optional[dict]:
         customer = mongo.Customer(channel_id)
         customer_info = await customer.check()
-        return bool(customer_info)
+        return customer_info
 
     @app_commands.command()
     @app_commands.describe(
@@ -36,7 +38,7 @@ class Customer(commands.GroupCog, group_name='customer'):
         """Add a new customer to the database"""
         result = await self.customer_exists(interaction.channel_id)
 
-        if result is True:
+        if bool(result) is True:
             await interaction.response.send_message(
                 self.already_customer, ephemeral=True
             )
@@ -76,7 +78,7 @@ class Customer(commands.GroupCog, group_name='customer'):
         """Update an existing customer"""
         result = await self.customer_exists(interaction.channel_id)
 
-        if result is False:
+        if bool(result) is False:
             await interaction.response.send_message(
                 self.not_customer, ephemeral=True
             )
@@ -104,6 +106,31 @@ class Customer(commands.GroupCog, group_name='customer'):
             content = f'Customer \'{name}\' has been updated successfully.'
 
         await interaction.response.send_message(content, ephemeral=True)
+
+    @app_commands.command()
+    async def notion(self, interaction: discord.Interaction) -> None:
+        """Send the Notion access button"""
+        result = await self.customer_exists(interaction.channel_id)
+
+        if result is False:
+            await interaction.response.send_message(
+                self.not_customer, ephemeral=True
+            )
+            return
+
+        notion_url = result.get('notion', None)
+
+        if notion_url is None:
+            await interaction.response.send_message(
+                self.not_notion, ephemeral=True
+            )
+            return
+
+        view = discord.ui.View(timeout=None)
+        button = discord.ui.Button(label='Go to Notion', url=notion_url)
+        view.add_item(button)
+
+        await interaction.response.send_message(view=view)
 
 
 async def setup(bot: Bot) -> None:
